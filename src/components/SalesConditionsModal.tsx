@@ -49,16 +49,18 @@ export const SalesConditionsModal: React.FC<SalesConditionsModalProps> = ({
         className="w-full max-w-xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-6 duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-stone-100">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#F0EBE1]">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-amber-700" />
-            <h2 className="font-serif text-lg sm:text-xl font-bold text-stone-900">
+            <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-900 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-violet-850" />
+            </div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-stone-900">
               Conditions de Vente
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
@@ -66,24 +68,24 @@ export const SalesConditionsModal: React.FC<SalesConditionsModalProps> = ({
         </div>
 
         {/* Content list */}
-        <div className="overflow-y-auto p-5 sm:p-6 space-y-3.5 divide-y divide-stone-100">
-          <div className="pb-3 text-xs sm:text-sm text-stone-600 leading-relaxed bg-amber-50/70 p-3.5 rounded-xl border border-amber-200/60">
-            <span className="font-semibold text-amber-950">Important : </span>
+        <div className="overflow-y-auto p-5 sm:p-6 space-y-3.5 divide-y divide-[#F0EBE1]">
+          <div className="pb-3 text-xs sm:text-sm text-stone-600 leading-relaxed bg-violet-50/70 p-4 rounded-2xl border border-violet-200/60">
+            <span className="font-bold text-violet-950">Important : </span>
             Afin de vous garantir un service rapide, fiable et transparent, merci de prendre attentivement connaissance de nos règles commerciales avant toute commande.
           </div>
 
           {settings.salesConditions.map((cond, idx) => (
             <div key={idx} className="pt-3.5 flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-stone-100 shrink-0 mt-0.5">
+              <div className="p-2.5 rounded-2xl bg-stone-100 shrink-0 mt-0.5">
                 {conditionIcons[cond.icon || 'check-circle'] || (
-                  <CheckCircle2 className="w-5 h-5 text-amber-700" />
+                  <CheckCircle2 className="w-5 h-5 text-violet-800" />
                 )}
               </div>
               <div className="space-y-1">
                 <h3 className="text-xs sm:text-sm font-bold text-stone-900">
                   {cond.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed font-normal">
                   {cond.text}
                 </p>
               </div>
@@ -92,10 +94,10 @@ export const SalesConditionsModal: React.FC<SalesConditionsModalProps> = ({
         </div>
 
         {/* Bottom footer button */}
-        <div className="p-4 bg-stone-50 border-t border-stone-200">
+        <div className="p-4 bg-[#FAF7F2] border-t border-[#EDE8E0]">
           <button
             onClick={onClose}
-            className="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-semibold transition-colors"
+            className="w-full py-3.5 px-6 rounded-full bg-violet-900 hover:bg-violet-950 text-white text-xs sm:text-sm font-semibold transition-colors min-h-[44px]"
           >
             J'ai compris
           </button>

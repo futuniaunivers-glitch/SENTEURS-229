@@ -33,22 +33,22 @@ export const ProductsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
       {/* Header & Title */}
       <div className="space-y-2">
-        <span className="text-xs uppercase tracking-wider text-amber-900 font-bold">
+        <span className="text-xs uppercase tracking-wider text-violet-900 font-bold">
           Catalogue & Vente en Gros
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
           Nos Parfums & Senteurs
         </h1>
-        <p className="text-xs sm:text-sm text-stone-500 max-w-2xl">
+        <p className="text-xs sm:text-sm text-stone-600 max-w-2xl leading-relaxed">
           Sélectionnez vos articles pour profiter automatiquement des tarifs grossistes et dégressifs. Tarifs calculés en temps réel dès 3 pièces ou à la douzaine.
         </p>
       </div>
 
       {/* Search and Filters Bar */}
       <div className="space-y-4">
-        {/* Search Input */}
+        {/* Search Input (Pill shaped, 44px min height) */}
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-stone-400">
             <Search className="w-4 h-4" />
           </div>
           <input
@@ -56,12 +56,12 @@ export const ProductsPage: React.FC = () => {
             placeholder="🔎 Rechercher un produit (nom, senteur, type)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-3 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900 transition-all shadow-xs"
+            className="w-full pl-11 pr-11 py-3 bg-white border border-[#EDE8E0] rounded-full text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-violet-900/15 focus:border-violet-900 transition-all shadow-xs min-h-[44px]"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-600"
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-stone-400 hover:text-violet-950"
               aria-label="Effacer la recherche"
             >
               <X className="w-4 h-4" />
@@ -69,18 +69,18 @@ export const ProductsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Category Tabs (Segmented controls) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* Category Tabs (Horizontally scrolling pills) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {categories.map((cat) => {
             const isActive = activeCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[40px] flex items-center shrink-0 ${
                   isActive
-                    ? 'bg-stone-900 text-white shadow-xs'
-                    : 'bg-white text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200/80'
+                    ? 'bg-violet-900 text-white shadow-xs'
+                    : 'bg-white text-stone-700 hover:bg-violet-50 hover:text-violet-950 border border-[#EDE8E0]'
                 }`}
               >
                 {cat.name}
@@ -91,28 +91,28 @@ export const ProductsPage: React.FC = () => {
       </div>
 
       {/* Results Header */}
-      <div className="flex items-center justify-between text-xs text-stone-500 pt-2 border-t border-stone-200/60">
+      <div className="flex items-center justify-between text-xs text-stone-500 pt-2 border-t border-[#EDE8E0]">
         <span>
-          Affichage de <strong className="text-stone-800 font-semibold">{filteredProducts.length}</strong> produit{filteredProducts.length > 1 ? 's' : ''}
+          Affichage de <strong className="text-violet-950 font-bold">{filteredProducts.length}</strong> produit{filteredProducts.length > 1 ? 's' : ''}
         </span>
         {searchQuery && (
-          <span className="italic">
+          <span className="italic text-stone-600">
             Résultats pour "{searchQuery}"
           </span>
         )}
       </div>
 
-      {/* Product Grid or Empty State */}
+      {/* Product Grid (2 columns on mobile, 3 to 4 on desktop) or Empty State */}
       {filteredProducts.length === 0 ? (
-        <div className="py-16 text-center space-y-4 bg-white rounded-3xl border border-stone-200 p-8">
-          <div className="w-16 h-16 rounded-2xl bg-stone-100 mx-auto flex items-center justify-center text-stone-400">
+        <div className="py-16 text-center space-y-4 bg-white rounded-3xl border border-[#EDE8E0] p-8">
+          <div className="w-16 h-16 rounded-2xl bg-violet-50 text-violet-900 mx-auto flex items-center justify-center">
             <PackageSearch className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-serif text-lg font-bold text-stone-900">
+            <h3 className="text-lg font-bold text-stone-900">
               Aucun produit trouvé
             </h3>
-            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
               Nous n'avons trouvé aucun article correspondant à vos critères de recherche. Essayez d'autres mots-clés ou réinitialisez les filtres.
             </p>
           </div>
@@ -122,14 +122,14 @@ export const ProductsPage: React.FC = () => {
                 setSearchQuery('');
                 setActiveCategory('all');
               }}
-              className="py-2.5 px-4 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors"
+              className="py-3 px-6 rounded-full bg-violet-900 text-white text-xs font-semibold hover:bg-violet-950 transition-colors min-h-[44px]"
             >
               Réinitialiser les filtres
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

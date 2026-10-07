@@ -36,7 +36,7 @@ const AppContent: React.FC = () => {
 
   // Public storefront
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 font-sans selection:bg-amber-100 selection:text-amber-900">
+    <div className="min-h-screen flex flex-col bg-[#FAF7F2] font-sans selection:bg-violet-200 selection:text-violet-950">
       {/* Header */}
       <Header />
 

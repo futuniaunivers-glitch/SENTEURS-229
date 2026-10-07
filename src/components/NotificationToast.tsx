@@ -22,7 +22,7 @@ export const NotificationToast: React.FC = () => {
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md pointer-events-none transition-all duration-300 animate-in fade-in slide-in-from-top-4">
       <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm ${
+        className={`flex items-center gap-3 px-4.5 py-3 rounded-2xl border shadow-lg backdrop-blur-md ${
           bgStyles[toast.type]
         }`}
       >

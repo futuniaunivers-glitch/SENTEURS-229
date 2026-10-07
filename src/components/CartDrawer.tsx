@@ -35,16 +35,18 @@ export const CartDrawer: React.FC = () => {
         className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0EBE1]">
           <div className="flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-stone-900" />
-            <h2 className="font-serif text-lg font-bold text-stone-900">
+            <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-900 flex items-center justify-center">
+              <ShoppingBag className="w-4 h-4" />
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-stone-900">
               Votre Panier ({cartCount})
             </h2>
           </div>
           <button
             onClick={() => setIsCartDrawerOpen(false)}
-            className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
             aria-label="Fermer le panier"
           >
             <X className="w-5 h-5" />
@@ -55,14 +57,14 @@ export const CartDrawer: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-5">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
+              <div className="w-16 h-16 rounded-full bg-violet-50 text-violet-900 flex items-center justify-center">
                 <ShoppingBag className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <p className="font-serif text-lg font-bold text-stone-800">
+                <p className="text-lg font-bold text-stone-900">
                   Votre panier est vide
                 </p>
-                <p className="text-xs text-stone-500 max-w-xs">
+                <p className="text-xs text-stone-500 max-w-xs leading-relaxed">
                   Parcourez notre catalogue pour découvrir nos parfums, huiles et senteurs aux meilleurs tarifs.
                 </p>
               </div>
@@ -71,20 +73,20 @@ export const CartDrawer: React.FC = () => {
                   setIsCartDrawerOpen(false);
                   setCurrentView('products');
                 }}
-                className="py-2.5 px-4 rounded-xl bg-stone-900 text-white text-xs font-semibold hover:bg-stone-800 transition-colors"
+                className="py-3 px-6 rounded-full bg-violet-900 text-white text-xs font-semibold hover:bg-violet-950 transition-colors min-h-[44px]"
               >
                 Découvrir le catalogue
               </button>
             </div>
           ) : (
-            <div className="space-y-4 divide-y divide-stone-100">
+            <div className="space-y-4 divide-y divide-[#F0EBE1]">
               {cart.map((item) => (
                 <div key={item.product.id} className="pt-4 first:pt-0 flex gap-3.5 items-start">
                   {/* Thumbnail */}
                   <img
                     src={item.product.imageUrl}
                     alt={item.product.name}
-                    className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl object-cover bg-stone-100 shrink-0 border border-stone-200/60"
+                    className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover bg-[#F5F2EB] shrink-0 border border-[#EDE8E0]"
                   />
 
                   {/* Details */}
@@ -105,36 +107,36 @@ export const CartDrawer: React.FC = () => {
                     <div className="text-[11px] text-stone-500 mt-0.5">
                       {formatFCFA(item.unitPrice)} / pce
                       {item.product.wholesaleEnabled && item.quantity >= item.product.minimumWholesaleQuantity && (
-                        <span className="ml-1 text-amber-800 font-semibold">(Prix gros)</span>
+                        <span className="ml-1 text-violet-900 font-bold">(Prix gros)</span>
                       )}
                     </div>
 
                     {/* Stepper & Subtotal */}
                     <div className="mt-2.5 flex items-center justify-between">
-                      <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden bg-white">
+                      <div className="flex items-center border border-stone-200 rounded-full overflow-hidden bg-white shadow-xs">
                         <button
                           type="button"
                           onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
-                          className="w-7 h-7 flex items-center justify-center text-stone-600 hover:bg-stone-100 active:bg-stone-200 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center text-stone-600 hover:text-violet-950 hover:bg-violet-50 active:bg-violet-100 transition-colors"
                           aria-label="Diminuer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-8 text-center text-xs font-bold text-stone-900 tabular-nums">
+                        <span className="w-8 text-center text-xs font-extrabold text-stone-900 tabular-nums">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
                           disabled={item.quantity >= item.product.stock}
-                          className="w-7 h-7 flex items-center justify-center text-stone-600 hover:bg-stone-100 active:bg-stone-200 disabled:opacity-40 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center text-stone-600 hover:text-violet-950 hover:bg-violet-50 active:bg-violet-100 disabled:opacity-40 transition-colors"
                           aria-label="Augmenter"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
-                      <div className="text-sm font-bold text-stone-900 font-serif tabular-nums">
+                      <div className="text-sm font-extrabold text-violet-950 tabular-nums">
                         {formatFCFA(item.subtotal)}
                       </div>
                     </div>
@@ -147,10 +149,10 @@ export const CartDrawer: React.FC = () => {
 
         {/* Drawer Footer */}
         {cart.length > 0 && (
-          <div className="p-5 bg-stone-50 border-t border-stone-200 space-y-4">
+          <div className="p-5 bg-[#FAF7F2] border-t border-[#EDE8E0] space-y-4">
             {/* Delivery reminder */}
-            <div className="text-[11px] text-stone-600 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/60 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-violet-950 bg-violet-50/80 p-3 rounded-2xl border border-violet-200/60 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-violet-800 shrink-0 mt-0.5" />
               <span>
                 Frais de livraison réglés à la réception. Paiement préalable exigé pour la marchandise.
               </span>
@@ -159,10 +161,10 @@ export const CartDrawer: React.FC = () => {
             {/* Total calculation */}
             <div className="space-y-1">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs uppercase tracking-wider text-stone-500 font-semibold">
+                <span className="text-xs uppercase tracking-wider text-stone-500 font-bold">
                   Total produits
                 </span>
-                <span className="text-xl sm:text-2xl font-bold font-serif text-stone-950 tabular-nums">
+                <span className="text-xl sm:text-2xl font-extrabold text-violet-950 tabular-nums">
                   {formatFCFA(cartTotal)}
                 </span>
               </div>
@@ -172,7 +174,7 @@ export const CartDrawer: React.FC = () => {
             <div className="space-y-2">
               <button
                 onClick={handleProceedToCheckout}
-                className="w-full py-3.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-3.5 px-4 rounded-full bg-violet-900 hover:bg-violet-950 active:scale-[0.98] text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-sm min-h-[48px]"
               >
                 <span>Commander sur WhatsApp</span>
                 <ArrowRight className="w-4 h-4 text-amber-300" />
@@ -183,7 +185,7 @@ export const CartDrawer: React.FC = () => {
                   setIsCartDrawerOpen(false);
                   setIsConditionsModalOpen(true);
                 }}
-                className="w-full py-2 text-stone-500 hover:text-stone-800 text-[11px] font-medium transition-colors"
+                className="w-full py-2.5 text-stone-500 hover:text-violet-950 text-[11px] font-medium transition-colors min-h-[40px]"
               >
                 Consulter les conditions de vente
               </button>
