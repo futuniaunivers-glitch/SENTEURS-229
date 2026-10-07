@@ -1,23 +1,29 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Lock, Eye, EyeOff, ShieldCheck, ArrowLeft, KeyRound } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
   const { loginAdmin, setCurrentView } = useApp();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
       setError('Veuillez entrer le mot de passe administrateur.');
       return;
     }
 
-    const success = loginAdmin(password);
-    if (!success) {
-      setError('Mot de passe administrateur incorrect.');
+    setLoading(true);
+    setError(null);
+
+    const result = await loginAdmin(password);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.error || 'Mot de passe administrateur incorrect.');
     }
   };
 
@@ -78,19 +84,14 @@ export const AdminLoginPage: React.FC = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <div className="mt-2 p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-              <span>
-                Code d'accès par défaut : <strong className="font-mono">senteurs229</strong> (modifiable dans l'onglet Paramètres une fois connecté).
-              </span>
-            </div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm transition-all shadow-sm"
+            disabled={loading}
+            className="w-full py-3.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 active:scale-[0.98] text-white font-bold text-xs sm:text-sm transition-all shadow-sm"
           >
-            Se connecter à l'administration
+            {loading ? 'Connexion en cours...' : "Se connecter à l'administration"}
           </button>
         </form>
       </div>

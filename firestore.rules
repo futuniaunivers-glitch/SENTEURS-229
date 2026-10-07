@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Admins Collection:
+    // A user can check if their own UID is registered as an admin.
+    // Only existing admins can add or remove admin privileges.
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Products Collection:
+    // Public visitors can only view active products.
+    // Admins can view all products (active & inactive) and manage them.
+    match /products/{productId} {
+      allow get, list: if (resource.data.isActive == true) || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Categories Collection:
+    // Public read, admin write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Settings Collection:
+    // Public read, admin write.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders Collection:
+    // Public can create orders (new order submission from checkout).
+    // Only admins can list, read details, update status, or delete.
+    match /orders/{orderId} {
+      allow create: if request.resource.data.keys().hasAll([
+        'orderNumber', 'customerName', 'phone', 'city', 'area',
+        'deliveryNote', 'items', 'total', 'status', 'createdAt'
+      ])
+      && request.resource.data.status == 'Nouvelle'
+      && request.resource.data.customerName is string
+      && request.resource.data.customerName.size() > 0
+      && request.resource.data.phone is string
+      && request.resource.data.total is number
+      && request.resource.data.total >= 0;
+
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

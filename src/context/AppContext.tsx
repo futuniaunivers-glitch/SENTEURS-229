@@ -16,6 +16,17 @@ import {
 } from '../data/initialData';
 import { StorageService } from '../services/storage';
 import { calculateUnitPrice, isQuantityCompliant } from '../utils/pricing';
+import { isFirebaseConfigured, auth, adminEmail } from '../services/firebase';
+import { FirebaseService } from '../services/firebaseService';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  User,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from 'firebase/auth';
 
 export type AppView =
   | 'home'
@@ -36,6 +47,10 @@ interface AppContextType {
   setAdminTab: (tab: AdminTab) => void;
   navigateToProduct: (productId: string) => void;
 
+  // Firebase status
+  isFirebaseActive: boolean;
+  currentUser: User | null;
+
   // Categories & Search
   categories: Category[];
   activeCategory: CategoryId;
@@ -48,12 +63,12 @@ interface AppContextType {
   activeProducts: Product[];
   selectedProduct: Product | null;
   setSelectedProduct: (product: Product | null) => void;
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  updateStock: (id: string, deltaOrValue: number, isAbsolute?: boolean) => void;
-  toggleProductActive: (id: string) => void;
-  resetDemoData: () => void;
+  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  updateStock: (id: string, deltaOrValue: number, isAbsolute?: boolean) => Promise<void>;
+  toggleProductActive: (id: string) => Promise<void>;
+  resetDemoData: () => Promise<void>;
 
   // Cart
   cart: CartItem[];
@@ -76,17 +91,18 @@ interface AppContextType {
     deliveryNote: string;
     notes?: string;
     items: CartItem[];
-  }) => Order;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  }) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
 
   // Settings
   settings: AppSettings;
-  updateSettings: (updates: Partial<AppSettings>) => void;
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
 
   // Admin Auth
   isAdminAuthenticated: boolean;
-  loginAdmin: (password: string) => boolean;
-  logoutAdmin: () => void;
+  loginAdmin: (password: string) => Promise<{ success: boolean; error?: string }>;
+  changeAdminPassword: (currentPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  logoutAdmin: () => Promise<void>;
 
   // Conditions Modal
   isConditionsModalOpen: boolean;
@@ -103,56 +119,121 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Navigation
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
-  const [categories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Core Data
-  const [products, setProducts] = useState<Product[]>(() => StorageService.getProducts());
-  const [orders, setOrders] = useState<Order[]>(() => StorageService.getOrders());
-  const [settings, setSettings] = useState<AppSettings>(() => StorageService.getSettings());
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('gds_cart_v1');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  const [products, setProducts] = useState<Product[]>(() => {
+    return isFirebaseConfigured ? [] : StorageService.getProducts();
   });
+  const [orders, setOrders] = useState<Order[]>(() => {
+    return isFirebaseConfigured ? [] : StorageService.getOrders();
+  });
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    return isFirebaseConfigured ? INITIAL_SETTINGS : StorageService.getSettings();
+  });
+
+  const [cart, setCart] = useState<CartItem[]>(() => StorageService.getCart());
 
   // UI States
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isConditionsModalOpen, setIsConditionsModalOpen] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() =>
-    StorageService.isAuthenticated()
-  );
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(
     null
   );
 
-  // Sync products and orders to localStorage
-  useEffect(() => {
-    StorageService.saveProducts(products);
-  }, [products]);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3200);
+  };
 
+  // 1. Firebase Auth listener
   useEffect(() => {
-    StorageService.saveOrders(orders);
-  }, [orders]);
+    if (!isFirebaseConfigured || !auth) return;
+    const currentAuth = auth;
 
-  useEffect(() => {
-    StorageService.saveSettings(settings);
-  }, [settings]);
+    const unsubscribe = onAuthStateChanged(currentAuth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        // Verify user UID exists in `admins` Firestore collection
+        const hasAdminDoc = await FirebaseService.isUserAdmin(user.uid);
+        if (hasAdminDoc) {
+          setIsAdminAuthenticated(true);
+        } else {
+          setIsAdminAuthenticated(false);
+          // If non-admin user is logged in, sign them out from admin access
+          await signOut(currentAuth);
+        }
+      } else {
+        setIsAdminAuthenticated(false);
+      }
+    });
 
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Real-time Firestore sync when Firebase is configured
   useEffect(() => {
-    try {
-      localStorage.setItem('gds_cart_v1', JSON.stringify(cart));
-    } catch {
-      // ignore
+    if (!isFirebaseConfigured) return;
+
+    // Categories
+    const unsubCats = FirebaseService.subscribeCategories((fetchedCats) => {
+      setCategories(fetchedCats);
+    });
+
+    // Settings
+    const unsubSettings = FirebaseService.subscribeSettings((fetchedSettings) => {
+      setSettings(fetchedSettings);
+    });
+
+    // Products (respects rules: visitors get only active, admins get all)
+    const unsubProducts = FirebaseService.subscribeProducts(
+      isAdminAuthenticated,
+      (fetchedProducts) => {
+        setProducts(fetchedProducts);
+      },
+      (err) => {
+        console.warn('Subscription notice:', err);
+      }
+    );
+
+    // Orders (only if admin is authenticated)
+    let unsubOrders = () => {};
+    if (isAdminAuthenticated) {
+      unsubOrders = FirebaseService.subscribeOrders((fetchedOrders) => {
+        setOrders(fetchedOrders);
+      });
     }
+
+    return () => {
+      unsubCats();
+      unsubSettings();
+      unsubProducts();
+      unsubOrders();
+    };
+  }, [isAdminAuthenticated]);
+
+  // Sync cart to localStorage
+  useEffect(() => {
+    StorageService.saveCart(cart);
   }, [cart]);
 
-  // Handle URL hash navigation for clean browser back/forward or direct links like #/admin
+  // In Local Demo Mode only: persist products, orders, settings to localStorage
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      StorageService.saveProducts(products);
+      StorageService.saveOrders(orders);
+      StorageService.saveSettings(settings);
+    }
+  }, [products, orders, settings]);
+
+  // Handle URL hash navigation
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#/', '').replace('#', '');
@@ -179,7 +260,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Update hash when currentView changes
   const handleSetCurrentView = (view: AppView) => {
     setCurrentView(view);
     if (view === 'home') {
@@ -190,13 +270,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 3200);
-  };
-
   const navigateToProduct = (productId: string) => {
     const found = products.find((p) => p.id === productId);
     if (found) {
@@ -204,14 +277,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Only active products are shown on public catalog
+  // Only active products are visible to public visitors
   const activeProducts = products.filter((p) => p.isActive);
 
   // Cart calculations
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
 
-  // Add to cart with price engine and quantity check
   const addToCart = (
     product: Product,
     requestedQuantity: number = 1
@@ -226,8 +298,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Rupture de stock' };
     }
 
-    // Determine initial quantity: if item enforces a minimum (e.g. mini-format huiles minimum 6)
-    // and requestedQuantity is 1, set to minimumWholesaleQuantity
     let finalQty = requestedQuantity;
     if (!product.allowRetail && product.wholesaleEnabled && finalQty < product.minimumWholesaleQuantity) {
       finalQty = product.minimumWholesaleQuantity;
@@ -323,33 +393,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart([]);
   };
 
-  // Product mutations (Admin)
-  const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setProducts((prev) => [newProduct, ...prev]);
-    showToast(`Produit "${newProduct.name}" créé avec succès !`, 'success');
+  // Product mutations (Firestore or Demo fallback)
+  const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (isFirebaseConfigured) {
+      await FirebaseService.addProduct(productData);
+    } else {
+      const newProduct: Product = {
+        ...productData,
+        id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setProducts((prev) => [newProduct, ...prev]);
+    }
+    showToast(`Produit "${productData.name}" créé avec succès !`, 'success');
   };
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          return {
-            ...p,
-            ...updates,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return p;
-      })
-    );
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    if (isFirebaseConfigured) {
+      await FirebaseService.updateProduct(id, updates);
+    } else {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
+      );
+    }
 
-    // Also update in cart if present
+    // Update in cart if present
     setCart((prev) =>
       prev.map((item) => {
         if (item.product.id === id) {
@@ -369,57 +438,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Produit mis à jour !', 'success');
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const deleteProduct = async (id: string) => {
+    if (isFirebaseConfigured) {
+      await FirebaseService.deleteProduct(id);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
     setCart((prev) => prev.filter((item) => item.product.id !== id));
     showToast('Produit supprimé.', 'info');
   };
 
-  const updateStock = (id: string, deltaOrValue: number, isAbsolute = false) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const newStock = Math.max(0, isAbsolute ? deltaOrValue : p.stock + deltaOrValue);
-          return {
-            ...p,
-            stock: newStock,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return p;
-      })
-    );
+  const updateStock = async (id: string, deltaOrValue: number, isAbsolute = false) => {
+    const current = products.find((p) => p.id === id);
+    if (!current) return;
+    const newStock = Math.max(0, isAbsolute ? deltaOrValue : current.stock + deltaOrValue);
+
+    if (isFirebaseConfigured) {
+      await FirebaseService.updateStock(id, newStock);
+    } else {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, stock: newStock, updatedAt: new Date().toISOString() } : p
+        )
+      );
+    }
   };
 
-  const toggleProductActive = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const newActive = !p.isActive;
-          showToast(newActive ? 'Produit visible au public' : 'Produit masqué du catalogue', 'info');
-          return {
-            ...p,
-            isActive: newActive,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return p;
-      })
-    );
+  const toggleProductActive = async (id: string) => {
+    const current = products.find((p) => p.id === id);
+    if (!current) return;
+    const newActive = !current.isActive;
+
+    if (isFirebaseConfigured) {
+      await FirebaseService.updateProduct(id, { isActive: newActive });
+    } else {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, isActive: newActive, updatedAt: new Date().toISOString() } : p
+        )
+      );
+    }
+    showToast(newActive ? 'Produit visible au public' : 'Produit masqué du catalogue', 'info');
   };
 
-  const resetDemoData = () => {
-    setProducts(INITIAL_PRODUCTS);
-    setOrders(INITIAL_ORDERS);
-    setSettings(INITIAL_SETTINGS);
-    StorageService.saveProducts(INITIAL_PRODUCTS);
-    StorageService.saveOrders(INITIAL_ORDERS);
-    StorageService.saveSettings(INITIAL_SETTINGS);
-    showToast('Données de démonstration réinitialisées.', 'success');
+  const resetDemoData = async () => {
+    if (isFirebaseConfigured) {
+      await FirebaseService.seedInitialFirestoreData();
+      showToast('Catalogue initialisé dans Firestore.', 'success');
+    } else {
+      setProducts(INITIAL_PRODUCTS);
+      setOrders(INITIAL_ORDERS);
+      setSettings(INITIAL_SETTINGS);
+      StorageService.saveProducts(INITIAL_PRODUCTS);
+      StorageService.saveOrders(INITIAL_ORDERS);
+      StorageService.saveSettings(INITIAL_SETTINGS);
+      showToast('Données de démonstration réinitialisées.', 'success');
+    }
   };
 
   // Orders
-  const createOrder = (orderData: {
+  const createOrder = async (orderData: {
     customerName: string;
     phone: string;
     city: string;
@@ -427,10 +505,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deliveryNote: string;
     notes?: string;
     items: CartItem[];
-  }): Order => {
+  }): Promise<Order> => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
+    const orderToSave: Omit<Order, 'id'> = {
       orderNumber: `#GDS-${randomSuffix}`,
       customerName: orderData.customerName,
       phone: orderData.phone,
@@ -451,57 +528,157 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString(),
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    let created: Order;
+    if (isFirebaseConfigured) {
+      created = await FirebaseService.createOrder(orderToSave);
+      // Deduct stock for ordered items
+      for (const item of orderData.items) {
+        await updateStock(item.product.id, -item.quantity, false);
+      }
+    } else {
+      created = {
+        ...orderToSave,
+        id: `ord-${Date.now()}`,
+      };
+      setOrders((prev) => [created, ...prev]);
+      orderData.items.forEach((item) => {
+        updateStock(item.product.id, -item.quantity, false);
+      });
+    }
 
-    // Deduct stock for ordered items
-    orderData.items.forEach((item) => {
-      updateStock(item.product.id, -item.quantity, false);
-    });
-
-    return newOrder;
+    return created;
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          return {
-            ...ord,
-            status,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return ord;
-      })
-    );
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    if (isFirebaseConfigured) {
+      await FirebaseService.updateOrderStatus(orderId, status);
+    } else {
+      setOrders((prev) =>
+        prev.map((ord) =>
+          ord.id === orderId ? { ...ord, status, updatedAt: new Date().toISOString() } : ord
+        )
+      );
+    }
     showToast(`Commande mise à jour : ${status}`, 'success');
   };
 
   // Settings
-  const updateSettings = (updates: Partial<AppSettings>) => {
-    setSettings((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+  const updateSettings = async (updates: Partial<AppSettings>) => {
+    const newSettings = { ...settings, ...updates };
+    if (isFirebaseConfigured) {
+      await FirebaseService.updateSettings(newSettings);
+    } else {
+      setSettings(newSettings);
+    }
     showToast('Paramètres enregistrés !', 'success');
   };
 
-  // Admin Auth
-  const loginAdmin = (password: string): boolean => {
-    const valid = StorageService.verifyAdminCredentials(password);
-    if (valid) {
-      StorageService.loginAdmin();
+  // Admin Auth via Firebase Authentication
+  const loginAdmin = async (
+    pass: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!isFirebaseConfigured || !auth) {
+      // In local demo mode (when Firebase environment variables are absent)
       setIsAdminAuthenticated(true);
-      showToast('Connexion réussie à l’espace propriétaire.', 'success');
-      return true;
-    } else {
-      showToast('Mot de passe incorrect.', 'error');
-      return false;
+      showToast("Mode Démo Local actif", 'info');
+      return { success: true };
+    }
+
+    const emailToUse = adminEmail || '';
+    if (!emailToUse.trim()) {
+      return {
+        success: false,
+        error:
+          "Variable VITE_ADMIN_EMAIL non configurée dans l'environnement. Veuillez définir l'adresse e-mail de l'administrateur.",
+      };
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, emailToUse.trim(), pass.trim());
+      const uid = userCredential.user.uid;
+
+      // Verify that this UID exists as a document in the `admins` collection
+      const isAdminDoc = await FirebaseService.isUserAdmin(uid);
+      if (!isAdminDoc) {
+        await signOut(auth);
+        setIsAdminAuthenticated(false);
+        return {
+          success: false,
+          error: "Accès refusé : votre compte n'est pas enregistré comme administrateur dans la collection Firestore admins.",
+        };
+      }
+
+      setIsAdminAuthenticated(true);
+      showToast("Connexion réussie à l'espace propriétaire.", 'success');
+      return { success: true };
+    } catch (err: any) {
+      console.error('Firebase Auth Login Error:', err);
+      let message = 'Mot de passe incorrect ou erreur d’authentification.';
+      if (
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-credential'
+      ) {
+        message = 'Mot de passe administrateur incorrect.';
+      } else if (err.code === 'auth/too-many-requests') {
+        message = 'Trop de tentatives échouées. Réessayez dans quelques instants.';
+      } else if (err.message) {
+        message = err.message;
+      }
+      return { success: false, error: message };
     }
   };
 
-  const logoutAdmin = () => {
-    StorageService.logoutAdmin();
+  // Change Admin Password in Firebase Authentication
+  const changeAdminPassword = async (
+    currentPass: string,
+    newPass: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!isFirebaseConfigured || !auth) {
+      return {
+        success: false,
+        error: "Firebase n'est pas configuré. Impossible de modifier le mot de passe cloud.",
+      };
+    }
+
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      return {
+        success: false,
+        error: "Aucun administrateur connecté.",
+      };
+    }
+
+    try {
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email, currentPass.trim());
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password in Firebase Authentication
+      await updatePassword(user, newPass.trim());
+      showToast('Mot de passe administrateur mis à jour sur Firebase !', 'success');
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error changing admin password:', err);
+      let message = 'Erreur lors de la modification du mot de passe.';
+      if (
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-credential'
+      ) {
+        message = 'Le mot de passe actuel est incorrect.';
+      } else if (err.code === 'auth/weak-password') {
+        message = 'Le nouveau mot de passe doit comporter au moins 6 caractères.';
+      } else if (err.message) {
+        message = err.message;
+      }
+      return { success: false, error: message };
+    }
+  };
+
+  const logoutAdmin = async () => {
+    if (isFirebaseConfigured && auth) {
+      await signOut(auth);
+    }
     setIsAdminAuthenticated(false);
     showToast('Déconnexion effectuée.', 'info');
   };
@@ -514,6 +691,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminTab,
         setAdminTab,
         navigateToProduct,
+        isFirebaseActive: isFirebaseConfigured,
+        currentUser,
         categories,
         activeCategory,
         setActiveCategory,
@@ -545,6 +724,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSettings,
         isAdminAuthenticated,
         loginAdmin,
+        changeAdminPassword,
         logoutAdmin,
         isConditionsModalOpen,
         setIsConditionsModalOpen,

@@ -148,7 +148,7 @@ export const CheckoutPage: React.FC = () => {
     setFormError(null);
   };
 
-  const handleOrderSubmit = (e: React.FormEvent) => {
+  const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validations
@@ -182,8 +182,8 @@ export const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // 1. Create order in persistent DB
-    const created = createOrder({
+    // 1. Create order in persistent DB (Firestore or Local demo)
+    const created = await createOrder({
       customerName: form.fullName,
       phone: form.phone,
       city: form.city,

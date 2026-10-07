@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Article de senteur (parfum, huile, diffuseur, déodorant, etc.) vendu en gros et détail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "categoryId": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "imageUrl": { "type": "string" },
+        "stock": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "detailPrice": { "type": "number" },
+        "wholesaleEnabled": { "type": "boolean" },
+        "minimumWholesaleQuantity": { "type": "number" },
+        "wholesaleTiers": { "type": "array" },
+        "allowRetail": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "categoryId", "detailPrice", "stock", "isActive"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Catégorie de produit de senteur",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["id", "name"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Commande passée par un client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string", "maxLength": 30 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "city": { "type": "string", "maxLength": 60 },
+        "area": { "type": "string", "maxLength": 100 },
+        "deliveryNote": { "type": "string", "maxLength": 300 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Nouvelle", "Confirmée", "En préparation", "Livrée", "Annulée"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["orderNumber", "customerName", "phone", "city", "area", "deliveryNote", "items", "total", "status", "createdAt"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Configuration commerciale de la boutique",
+      "type": "object",
+      "properties": {
+        "businessName": { "type": "string", "maxLength": 100 },
+        "subtitle": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "whatsappRaw": { "type": "string", "maxLength": 20 },
+        "whatsappChannel": { "type": "string" },
+        "tiktok": { "type": "string" },
+        "facebook": { "type": "string" },
+        "googleMaps": { "type": "string" },
+        "salesConditions": { "type": "array" },
+        "deliveryInfo": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["businessName", "phone", "whatsappRaw"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Document de privilège administrateur identifié par UID Firebase Auth",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Catalogue des produits avec gestion des stocks et prix de gros"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Catégories de senteurs"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Commandes clients"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "Paramètres commerciaux et coordonnées"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Liste des administrateurs autorisés pour l'espace propriétaire"
+    }
+  }
+}
