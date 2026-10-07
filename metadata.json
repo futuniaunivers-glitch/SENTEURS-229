@@ -1,0 +1,6 @@
+{
+  "name": "GROSSISTE DES SENTEURS 229",
+  "description": "Plateforme de vente de parfums, huiles, déodorants, désodorisants et diffuseurs en gros, semi-gros et détail avec commande directe sur WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
