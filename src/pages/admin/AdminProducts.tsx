@@ -48,9 +48,13 @@ export const AdminProducts: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${name}" ?`)) {
-      deleteProduct(id);
+      try {
+        await deleteProduct(id);
+      } catch (err: any) {
+        alert(`Échec de la suppression dans Firestore : ${err?.message || String(err)}`);
+      }
     }
   };
 

@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  Loader2,
 } from 'lucide-react';
+import { compressImage, getDataUrlSizeInKB } from '../../utils/imageCompressor';
 
 interface AdminProductModalProps {
   product: Product | null; // null for new product
@@ -50,6 +52,9 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     { minQuantity: 12, pricePerUnit: 2300 },
   ]);
   const [error, setError] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageSizeKB, setImageSizeKB] = useState<number | null>(null);
 
   // Populate form if editing
   useEffect(() => {
@@ -74,6 +79,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               { minQuantity: 12, pricePerUnit: Math.round(product.detailPrice * 0.75) },
             ]
       );
+      if (product.imageUrl && product.imageUrl.startsWith('data:image/')) {
+        setImageSizeKB(getDataUrlSizeInKB(product.imageUrl));
+      } else {
+        setImageSizeKB(null);
+      }
     } else {
       // Default reset for new product
       setName('');
@@ -92,8 +102,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         { minQuantity: 6, pricePerUnit: 2500 },
         { minQuantity: 12, pricePerUnit: 2300 },
       ]);
+      setImageSizeKB(null);
     }
     setError(null);
+    setIsCompressing(false);
+    setIsSubmitting(false);
   }, [product, isOpen]);
 
   if (!isOpen) return null;
@@ -122,22 +135,41 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setWholesaleTiers((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Image file upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image file upload with client-side compression (max 800px width, JPEG ~0.7, < 300 KB target)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsCompressing(true);
+    setError(null);
+
+    try {
+      // Automatically compress in browser
+      const result = await compressImage(file, 800, 0.7);
+
+      if (result.isOverLimit) {
+        setError(
+          `Cette photo reste trop lourde (${result.sizeInKB} Ko après réduction, maximum autorisé 700 Ko). Veuillez choisir une photo plus petite ou moins volumineuse.`
+        );
+        setImageSizeKB(result.sizeInKB);
+        return;
+      }
+
+      setImageUrl(result.dataUrl);
+      setImageSizeKB(result.sizeInKB);
+    } catch (err: any) {
+      console.error('Erreur compression image:', err);
+      setError("Impossible de traiter cette image. Veuillez sélectionner un autre fichier ou format.");
+    } finally {
+      setIsCompressing(false);
+      // Reset input value so same file can be re-selected if needed
+      e.target.value = '';
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!name.trim()) {
       setError('Le nom du produit est obligatoire.');
@@ -149,6 +181,18 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       return;
     }
 
+    // Verify image size if base64 data URL
+    let finalImageUrl = imageUrl;
+    if (finalImageUrl.startsWith('data:image/')) {
+      const currentSizeKB = getDataUrlSizeInKB(finalImageUrl);
+      if (currentSizeKB > 700) {
+        setError(
+          `Cette photo reste trop lourde (${currentSizeKB} Ko, supérieur au seuil maximal de 700 Ko). Le produit ne peut pas être enregistré. Veuillez choisir une photo plus petite.`
+        );
+        return;
+      }
+    }
+
     // Sort wholesale tiers
     const sortedTiers = [...wholesaleTiers].sort((a, b) => a.minQuantity - b.minQuantity);
 
@@ -156,7 +200,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       name: name.trim(),
       categoryId,
       description: description.trim(),
-      imageUrl,
+      imageUrl: finalImageUrl,
       detailPrice: Math.round(detailPrice),
       wholesaleEnabled,
       minimumWholesaleQuantity: Math.max(1, minimumWholesaleQuantity),
@@ -167,13 +211,23 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       isActive,
     };
 
-    if (product) {
-      updateProduct(product.id, productPayload);
-    } else {
-      addProduct(productPayload);
+    setIsSubmitting(true);
+    try {
+      if (product) {
+        await updateProduct(product.id, productPayload);
+      } else {
+        await addProduct(productPayload);
+      }
+      onClose();
+    } catch (err: any) {
+      console.error('Erreur enregistrement Firestore:', err);
+      const errorMsg = err?.message || String(err);
+      setError(
+        `Échec de l'enregistrement dans Firestore : ${errorMsg}. Le produit n'a pas été enregistré.`
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onClose();
   };
 
   return (
@@ -209,9 +263,9 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         {/* Scrollable Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{error}</span>
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <div className="font-medium leading-relaxed">{error}</div>
             </div>
           )}
 
@@ -284,36 +338,65 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Photo du Produit */}
+          {/* Section 2: Photo du Produit avec Réduction Automatique */}
           <div className="space-y-3 pt-2 border-t border-stone-100">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-stone-400">
-              2. Photo du Produit
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-400">
+                2. Photo du Produit
+              </h3>
+              <span className="text-[11px] text-stone-500">
+                Optimisation auto (max 800px · JPEG · &lt; 300 Ko)
+              </span>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
+              <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
                 <img
                   src={imageUrl}
                   alt="Aperçu"
                   className="w-full h-full object-cover"
                 />
+                {isCompressing && (
+                  <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center text-white">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 space-y-2 w-full">
                 <label className="block text-xs font-semibold text-stone-700">
-                  Choisir une photo depuis votre appareil ou une photo catalogue :
+                  Sélectionner une photo depuis votre appareil ou une photo catalogue :
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <label className="cursor-pointer py-2 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Téléverser (smartphone / PC)</span>
+                    {isCompressing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-700" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isCompressing ? 'Réduction en cours...' : 'Téléverser une photo'}</span>
                     <input
                       type="file"
                       accept="image/*"
+                      disabled={isCompressing || isSubmitting}
                       onChange={handleImageUpload}
                       className="hidden"
                     />
                   </label>
+
+                  {imageSizeKB !== null && (
+                    <span
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                        imageSizeKB <= 300
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : imageSizeKB <= 700
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-rose-50 text-rose-800 border-rose-200'
+                      }`}
+                    >
+                      Taille : {imageSizeKB} Ko {imageSizeKB <= 300 ? '(idéale)' : ''}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
@@ -321,7 +404,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                     <button
                       key={i}
                       type="button"
-                      onClick={() => setImageUrl(preset.url)}
+                      onClick={() => {
+                        setImageUrl(preset.url);
+                        setImageSizeKB(null);
+                        setError(null);
+                      }}
                       className={`text-[10px] px-2 py-1 rounded-md border whitespace-nowrap transition-colors ${
                         imageUrl === preset.url
                           ? 'bg-stone-900 text-white border-stone-900'
@@ -515,15 +602,18 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               className="py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-50 transition-colors"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="py-2.5 px-6 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all shadow-sm"
+              disabled={isSubmitting || isCompressing}
+              className="py-2.5 px-6 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2"
             >
-              ENREGISTRER LE PRODUIT
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin text-amber-300" />}
+              <span>{isSubmitting ? 'Enregistrement en cours...' : 'ENREGISTRER LE PRODUIT'}</span>
             </button>
           </div>
         </form>
