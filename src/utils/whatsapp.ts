@@ -43,7 +43,11 @@ export function buildWhatsAppUrl(
   phoneRaw: string,
   message: string
 ): string {
-  // Strip spaces, plus sign, hyphens
-  const cleanPhone = phoneRaw.replace(/[^0-9]/g, '');
+  // Strip spaces, plus sign, hyphens and any non-digit characters
+  let cleanPhone = (phoneRaw || '').replace(/[^0-9]/g, '');
+  // If it starts with 00 (international call prefix), remove 00
+  if (cleanPhone.startsWith('00')) {
+    cleanPhone = cleanPhone.substring(2);
+  }
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
