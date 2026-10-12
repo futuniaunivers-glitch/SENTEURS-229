@@ -37,11 +37,13 @@ export const CheckoutPage: React.FC = () => {
 
   const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [whatsappUrl, setWhatsappUrl] = useState<string>('');
 
   // If cart is empty and no order just submitted
   if (cart.length === 0 && !submittedOrder) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+      <div className="max-w-xl mx-auto px-4 py-16 pb-32 sm:pb-16 text-center space-y-4">
         <div className="w-16 h-16 rounded-full bg-violet-50 text-violet-900 mx-auto flex items-center justify-center">
           <ShoppingBag className="w-8 h-8" />
         </div>
@@ -52,6 +54,7 @@ export const CheckoutPage: React.FC = () => {
           Vous devez sélectionner au moins un article avant de pouvoir finaliser votre commande.
         </p>
         <button
+          type="button"
           onClick={() => setCurrentView('products')}
           className="mt-2 py-3 px-6 rounded-full bg-violet-900 text-white text-xs font-semibold hover:bg-violet-950 transition-colors min-h-[44px]"
         >
@@ -63,8 +66,24 @@ export const CheckoutPage: React.FC = () => {
 
   // Success view after sending on WhatsApp
   if (submittedOrder) {
+    const finalWhatsappUrl =
+      whatsappUrl ||
+      buildWhatsAppUrl(
+        settings.whatsappRaw,
+        generateWhatsAppOrderMessage(
+          submittedOrder.items.map((i) => ({
+            product: { id: i.productId, name: i.productName } as any,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            subtotal: i.subtotal,
+          })),
+          form,
+          submittedOrder.total
+        )
+      );
+
     return (
-      <div className="max-w-xl mx-auto px-4 py-12 space-y-6">
+      <div className="max-w-xl mx-auto px-4 py-8 sm:py-12 pb-32 sm:pb-16 space-y-6 relative z-10">
         <div className="bg-white rounded-3xl border border-[#EDE8E0] p-6 sm:p-8 text-center space-y-5 shadow-lg">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
             <CheckCircle2 className="w-9 h-9" />
@@ -72,7 +91,7 @@ export const CheckoutPage: React.FC = () => {
 
           <div className="space-y-1">
             <span className="text-xs font-bold text-violet-900 uppercase tracking-wider">
-              Commande enregistrée
+              Commande enregistrée avec succès
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
               Commande {submittedOrder.orderNumber}
@@ -97,30 +116,27 @@ export const CheckoutPage: React.FC = () => {
             </p>
           </div>
 
+          <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 text-left space-y-1">
+            <p className="font-bold flex items-center gap-1.5 text-emerald-950">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Votre commande est bien enregistrée !</span>
+            </p>
+            <p className="text-[11px] text-emerald-800 leading-relaxed">
+              Si WhatsApp ne s'est pas ouvert automatiquement sur votre téléphone, appuyez sur le bouton ci-dessous pour transmettre votre message avec votre commande déjà enregistrée :
+            </p>
+          </div>
+
           <div className="pt-2 space-y-3">
             <a
-              href={buildWhatsAppUrl(
-                settings.whatsappRaw,
-                generateWhatsAppOrderMessage(
-                  submittedOrder.items.map((i) => ({
-                    product: { id: i.productId, name: i.productName } as any,
-                    quantity: i.quantity,
-                    unitPrice: i.unitPrice,
-                    subtotal: i.subtotal,
-                  })),
-                  form,
-                  submittedOrder.total
-                )
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3.5 px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm min-h-[48px]"
+              href={finalWhatsappUrl}
+              className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px]"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Ouvrir WhatsApp à nouveau si besoin</span>
+              <MessageCircle className="w-5 h-5 text-white shrink-0" />
+              <span>Ouvrir WhatsApp</span>
             </a>
 
             <button
+              type="button"
               onClick={() => {
                 setSubmittedOrder(null);
                 setCurrentView('products');
@@ -148,8 +164,12 @@ export const CheckoutPage: React.FC = () => {
     setFormError(null);
   };
 
-  const handleOrderSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOrderSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+
+    if (isSubmitting) return;
 
     // Validations
     if (!form.fullName.trim()) {
@@ -182,33 +202,53 @@ export const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // 1. Create order in persistent DB (Firestore or Local demo)
-    const created = await createOrder({
-      customerName: form.fullName,
-      phone: form.phone,
-      city: form.city,
-      area: form.area,
-      deliveryNote: form.deliveryNote,
-      notes: form.notes,
-      items: cart,
-    });
+    setFormError(null);
+    setIsSubmitting(true);
 
-    // 2. Generate WhatsApp message and URL
-    const message = generateWhatsAppOrderMessage(cart, form, cartTotal);
-    const whatsappUrl = buildWhatsAppUrl(settings.whatsappRaw, message);
+    try {
+      // 1. Create order in persistent DB (Firestore or Local demo)
+      const created = await createOrder({
+        customerName: form.fullName,
+        phone: form.phone,
+        city: form.city,
+        area: form.area,
+        deliveryNote: form.deliveryNote,
+        notes: form.notes,
+        items: cart,
+      });
 
-    // 3. Clear cart and set submitted state
-    clearCart();
-    setSubmittedOrder(created);
+      // 2. Generate WhatsApp message and URL
+      const message = generateWhatsAppOrderMessage(cart, form, cartTotal);
+      const url = buildWhatsAppUrl(settings.whatsappRaw, message);
 
-    // 4. Open WhatsApp immediately
-    window.open(whatsappUrl, '_blank');
+      // 3. Set URL and submitted order state, clear cart
+      setWhatsappUrl(url);
+      setSubmittedOrder(created);
+      clearCart();
+      setIsSubmitting(false);
+
+      // 4. Direct redirect on the same page (works seamlessly on mobile iOS Safari & Android Chrome)
+      try {
+        window.location.href = url;
+      } catch (redirectErr) {
+        console.error('Erreur lors de la redirection automatique WhatsApp :', redirectErr);
+        // Confirmation screen is mounted with the manual link
+      }
+    } catch (err: any) {
+      console.error("Erreur lors de l'enregistrement de la commande :", err);
+      setFormError(
+        err?.message ||
+          "L'enregistrement de votre commande a échoué. Veuillez vérifier votre connexion internet et réessayer, ou nous contacter directement sur WhatsApp."
+      );
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32 sm:pb-16 space-y-8 relative z-10">
       {/* Top back button */}
       <button
+        type="button"
         onClick={() => setCurrentView('products')}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 hover:text-violet-950 transition-colors py-1"
       >
@@ -242,9 +282,9 @@ export const CheckoutPage: React.FC = () => {
           </div>
 
           {formError && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs text-rose-800">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{formError}</span>
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-800 animate-in fade-in">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span className="font-medium leading-relaxed">{formError}</span>
             </div>
           )}
 
@@ -349,7 +389,7 @@ export const CheckoutPage: React.FC = () => {
             <div className="bg-violet-50/80 rounded-2xl p-4 border border-violet-200/70 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-violet-950 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-violet-800" />
+                  <ShieldCheck className="w-4 h-4 text-violet-800 shrink-0" />
                   Conditions de vente indispensables :
                 </span>
                 <button
@@ -383,15 +423,33 @@ export const CheckoutPage: React.FC = () => {
               </label>
             </div>
 
-            {/* Submit Button (Pill button) */}
+            {/* Error banner above button if error present */}
+            {formError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-800 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span className="font-medium leading-relaxed">{formError}</span>
+              </div>
+            )}
+
+            {/* Submit Button (Pill button with loading state) */}
             <div className="pt-4">
               <button
-                type="submit"
-                disabled={!form.acceptedTerms}
-                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:cursor-not-allowed active:scale-[0.99] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px]"
+                type="button"
+                onClick={handleOrderSubmit}
+                disabled={!form.acceptedTerms || isSubmitting}
+                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:cursor-not-allowed active:scale-[0.99] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px] relative z-20 cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5 text-white" />
-                <span>💬 ENVOYER MA COMMANDE SUR WHATSAPP</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>ENVOI EN COURS...</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-5 h-5 text-white shrink-0" />
+                    <span>💬 ENVOYER MA COMMANDE SUR WHATSAPP</span>
+                  </>
+                )}
               </button>
               {!form.acceptedTerms && (
                 <p className="text-[11px] text-center text-stone-500 mt-2">
