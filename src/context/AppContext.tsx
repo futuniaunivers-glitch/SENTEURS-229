@@ -533,7 +533,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created = await FirebaseService.createOrder(orderToSave);
       // Deduct stock for ordered items
       for (const item of orderData.items) {
-        await updateStock(item.product.id, -item.quantity, false);
+        try {
+          await updateStock(item.product.id, -item.quantity, false);
+        } catch (stockErr) {
+          console.warn('Erreur décrémentation stock:', stockErr);
+        }
       }
     } else {
       created = {
@@ -542,7 +546,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setOrders((prev) => [created, ...prev]);
       orderData.items.forEach((item) => {
-        updateStock(item.product.id, -item.quantity, false);
+        try {
+          updateStock(item.product.id, -item.quantity, false);
+        } catch (stockErr) {
+          console.warn('Erreur décrémentation stock local:', stockErr);
+        }
       });
     }
 

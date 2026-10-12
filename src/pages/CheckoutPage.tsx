@@ -129,7 +129,9 @@ export const CheckoutPage: React.FC = () => {
           <div className="pt-2 space-y-3">
             <a
               href={finalWhatsappUrl}
-              className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px]"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px] cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 text-white shrink-0" />
               <span>Ouvrir WhatsApp</span>
@@ -171,34 +173,44 @@ export const CheckoutPage: React.FC = () => {
 
     if (isSubmitting) return;
 
-    // Validations
+    // Validations with smooth scrolling and focus for mobile
     if (!form.fullName.trim()) {
       setFormError('Veuillez renseigner votre nom complet.');
+      document.getElementById('field-fullName')?.focus();
       return;
     }
 
     if (!form.phone.trim()) {
       setFormError('Veuillez renseigner votre numéro de téléphone.');
+      document.getElementById('field-phone')?.focus();
       return;
     }
 
     if (!form.city.trim()) {
       setFormError('Veuillez renseigner la ville.');
+      document.getElementById('field-city')?.focus();
       return;
     }
 
     if (!form.area.trim()) {
       setFormError('Veuillez indiquer votre quartier ou zone.');
+      document.getElementById('field-area')?.focus();
       return;
     }
 
     if (!form.deliveryNote.trim()) {
       setFormError('Veuillez donner une indication de livraison (carrefour, repère).');
+      document.getElementById('field-deliveryNote')?.focus();
       return;
     }
 
     if (!form.acceptedTerms) {
-      setFormError('Vous devez cocher la case d’acceptation des conditions de vente pour valider.');
+      setFormError('Vous devez cocher la case d’acceptation des conditions de vente ci-dessus pour valider.');
+      const termsBox = document.getElementById('field-acceptedTerms');
+      if (termsBox) {
+        termsBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        termsBox.focus();
+      }
       return;
     }
 
@@ -206,7 +218,7 @@ export const CheckoutPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Create order in persistent DB (Firestore or Local demo)
+      // 1. Create order in persistent DB (Firestore or Local storage)
       const created = await createOrder({
         customerName: form.fullName,
         phone: form.phone,
@@ -227,12 +239,24 @@ export const CheckoutPage: React.FC = () => {
       clearCart();
       setIsSubmitting(false);
 
-      // 4. Direct redirect on the same page (works seamlessly on mobile iOS Safari & Android Chrome)
+      // Scroll to top so the confirmation view is immediately fully visible
+      window.scrollTo({ top: 0, behavior: 'instant' });
+
+      // 4. Open WhatsApp in an external window/tab to prevent iframe embed blocking ("wa.me a refusé de se connecter")
       try {
-        window.location.href = url;
+        const opened = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+          // If popup blocker intervened, attempt programmatic anchor click with target="_blank"
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       } catch (redirectErr) {
-        console.error('Erreur lors de la redirection automatique WhatsApp :', redirectErr);
-        // Confirmation screen is mounted with the manual link
+        console.warn('Ouverture automatique WhatsApp différée :', redirectErr);
       }
     } catch (err: any) {
       console.error("Erreur lors de l'enregistrement de la commande :", err);
@@ -245,7 +269,7 @@ export const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32 sm:pb-16 space-y-8 relative z-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-36 sm:pb-16 space-y-8 relative z-10">
       {/* Top back button */}
       <button
         type="button"
@@ -288,12 +312,13 @@ export const CheckoutPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleOrderSubmit} className="space-y-4">
+          <form onSubmit={handleOrderSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-stone-800 mb-1">
                 Nom complet *
               </label>
               <input
+                id="field-fullName"
                 type="text"
                 name="fullName"
                 required
@@ -309,6 +334,7 @@ export const CheckoutPage: React.FC = () => {
                 Numéro de Téléphone (Appels & WhatsApp) *
               </label>
               <input
+                id="field-phone"
                 type="tel"
                 name="phone"
                 required
@@ -325,6 +351,7 @@ export const CheckoutPage: React.FC = () => {
                   Ville *
                 </label>
                 <select
+                  id="field-city"
                   name="city"
                   value={form.city}
                   onChange={handleInputChange}
@@ -345,6 +372,7 @@ export const CheckoutPage: React.FC = () => {
                   Quartier / Zone *
                 </label>
                 <input
+                  id="field-area"
                   type="text"
                   name="area"
                   required
@@ -361,6 +389,7 @@ export const CheckoutPage: React.FC = () => {
                 Indication de livraison (repère, carrefour) *
               </label>
               <input
+                id="field-deliveryNote"
                 type="text"
                 name="deliveryNote"
                 required
@@ -411,6 +440,7 @@ export const CheckoutPage: React.FC = () => {
             <div className="pt-2">
               <label className="flex items-start gap-3 cursor-pointer group p-2 rounded-xl hover:bg-stone-50 transition-colors min-h-[44px]">
                 <input
+                  id="field-acceptedTerms"
                   type="checkbox"
                   name="acceptedTerms"
                   checked={form.acceptedTerms}
@@ -436,8 +466,8 @@ export const CheckoutPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleOrderSubmit}
-                disabled={!form.acceptedTerms || isSubmitting}
-                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:cursor-not-allowed active:scale-[0.99] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px] relative z-20 cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-700/60 disabled:cursor-wait active:scale-[0.99] text-white font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 shadow-md min-h-[50px] relative z-20 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -451,11 +481,6 @@ export const CheckoutPage: React.FC = () => {
                   </>
                 )}
               </button>
-              {!form.acceptedTerms && (
-                <p className="text-[11px] text-center text-stone-500 mt-2">
-                  Veuillez accepter les conditions de vente ci-dessus pour activer le bouton de commande.
-                </p>
-              )}
             </div>
           </form>
         </div>
