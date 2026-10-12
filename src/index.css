@@ -1,102 +1,18 @@
 @import "tailwindcss";
 
-:root {
-  --color-primary: #5B2A86;
-  --color-primary-hover: #4A2070;
-  --color-primary-light: #EFE7F7;
-  --color-bg-page: #F8F3EC;
-  --color-bg-darker: #EDE3D6;
-  --color-surface-card: #FFFFFF;
-  --color-text-main: #1F1630;
-  --color-text-muted: #6B6177;
-  --color-border: #E6DDD0;
-  --color-success: #2E7D4F;
-  --color-warning: #B7791F;
-  --color-error: #B3261E;
-}
-
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  body {
+  html, body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--color-bg-page);
-    color: var(--color-text-main);
     -webkit-tap-highlight-color: transparent;
-    font-size: 1rem;
-    line-height: 1.5;
+    background-color: #FAF7F2;
   }
   
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3, h4, h5, h6, .font-display {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: var(--color-text-main);
-  }
-
-  /* Universal accessible focus indicators */
-  :focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
   }
 }
 
-/* Typography scales according to design system */
-.text-main-title {
-  font-size: clamp(1.75rem, 5vw, 3rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-
-.text-section-title {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-}
-
-.text-body {
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.text-secondary {
-  font-size: 0.875rem;
-  line-height: 1.4;
-}
-
-.text-price {
-  font-weight: 700;
-}
-
-/* Soft boutique shadows */
-.shadow-soft {
-  box-shadow: 0 4px 20px rgba(31, 22, 48, 0.06);
-}
-
-.shadow-soft-hover:hover {
-  box-shadow: 0 8px 30px rgba(31, 22, 48, 0.1);
-}
-
-/* Hide scrollbar with horizontal snap */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Touch active bounce */
-.btn-press {
-  transition: transform 150ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out;
-}
-.btn-press:active {
-  transform: scale(0.98);
-}
-
-/* Custom scrollbar */
+/* Custom scrollbar and touch ergonomics */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -107,19 +23,21 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #E6DDD0;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6B6177;
+  background: #94a3b8;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+/* Hide scrollbar for clean horizontal pill scrolling on mobile */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+

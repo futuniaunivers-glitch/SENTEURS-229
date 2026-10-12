@@ -1,28 +1,28 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { MessageCircle, ExternalLink, MapPin, Phone, Lock, Sparkles } from 'lucide-react';
+import { MessageCircle, ExternalLink, MapPin, Lock } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const { setCurrentView, settings } = useApp();
 
   return (
-    <footer className="bg-[#EDE3D6] text-[#1F1630] pt-12 pb-24 md:pb-12 border-t border-[#E6DDD0]">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-[#1A0A2A] text-stone-300 pt-12 pb-24 md:pb-12 border-t border-violet-950/40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand & Description */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-[12px] bg-[#5B2A86] text-white flex items-center justify-center text-sm font-extrabold shadow-soft">
+              <div className="w-9 h-9 rounded-full bg-violet-900 text-amber-200 flex items-center justify-center font-bold text-sm shadow-sm ring-1 ring-violet-700/60">
                 GS
               </div>
-              <span className="text-base sm:text-lg font-bold text-[#1F1630] tracking-tight">
+              <span className="font-extrabold text-base sm:text-lg text-white tracking-tight">
                 {settings.businessName}
               </span>
             </div>
-            <p className="text-xs text-[#5B2A86] font-bold">
+            <p className="text-xs text-amber-200/90 font-medium">
               {settings.subtitle}
             </p>
-            <p className="text-xs text-[#6B6177] leading-relaxed">
+            <p className="text-xs text-stone-400 leading-relaxed">
               Vente en gros, semi-gros et détail de parfums d'exception, huiles pures, déodorants et diffuseurs d'ambiance au Bénin.
             </p>
             <div className="pt-1">
@@ -30,9 +30,9 @@ export const Footer: React.FC = () => {
                 href={settings.whatsappChannel}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] bg-[#25D366]/15 hover:bg-[#25D366] text-[#2E7D4F] hover:text-white border border-[#25D366]/30 rounded-full text-xs font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-semibold transition-colors min-h-[44px]"
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
                 <span>Rejoindre notre chaîne WhatsApp</span>
               </a>
             </div>
@@ -40,14 +40,14 @@ export const Footer: React.FC = () => {
 
           {/* Quick links */}
           <div>
-            <h4 className="text-xs font-bold text-[#1F1630] uppercase tracking-wider mb-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Navigation
             </h4>
-            <ul className="text-xs text-[#6B6177]">
+            <ul className="space-y-2.5 text-xs text-stone-400">
               <li>
                 <button
                   onClick={() => setCurrentView('home')}
-                  className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white transition-colors py-1 text-left"
                 >
                   Accueil
                 </button>
@@ -55,7 +55,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => setCurrentView('products')}
-                  className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white transition-colors py-1 text-left"
                 >
                   Catalogue des produits
                 </button>
@@ -63,7 +63,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => setCurrentView('conditions')}
-                  className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white transition-colors py-1 text-left"
                 >
                   Conditions générales de vente
                 </button>
@@ -71,7 +71,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => setCurrentView('contact')}
-                  className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white transition-colors py-1 text-left"
                 >
                   Contact & informations
                 </button>
@@ -81,19 +81,19 @@ export const Footer: React.FC = () => {
 
           {/* Social Links */}
           <div>
-            <h4 className="text-xs font-bold text-[#1F1630] uppercase tracking-wider mb-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Réseaux & Communauté
             </h4>
-            <ul className="text-xs text-[#6B6177]">
+            <ul className="space-y-2.5 text-xs text-stone-400">
               <li>
                 <a
                   href={`https://wa.me/${settings.whatsappRaw}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] flex items-center gap-1.5 hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white flex items-center gap-1.5 transition-colors py-1"
                 >
                   <span>WhatsApp Officiel ({settings.phone})</span>
-                  <ExternalLink className="w-3 h-3 text-[#6B6177]" />
+                  <ExternalLink className="w-3 h-3 text-stone-500" />
                 </a>
               </li>
               <li>
@@ -101,10 +101,10 @@ export const Footer: React.FC = () => {
                   href={settings.whatsappChannel}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] flex items-center gap-1.5 hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white flex items-center gap-1.5 transition-colors py-1"
                 >
                   <span>Chaîne WhatsApp Nouveautés</span>
-                  <ExternalLink className="w-3 h-3 text-[#6B6177]" />
+                  <ExternalLink className="w-3 h-3 text-stone-500" />
                 </a>
               </li>
               <li>
@@ -112,10 +112,10 @@ export const Footer: React.FC = () => {
                   href={settings.tiktok}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] flex items-center gap-1.5 hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white flex items-center gap-1.5 transition-colors py-1"
                 >
                   <span>TikTok @grossiste.des.sen</span>
-                  <ExternalLink className="w-3 h-3 text-[#6B6177]" />
+                  <ExternalLink className="w-3 h-3 text-stone-500" />
                 </a>
               </li>
               <li>
@@ -123,10 +123,10 @@ export const Footer: React.FC = () => {
                   href={settings.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] flex items-center gap-1.5 hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white flex items-center gap-1.5 transition-colors py-1"
                 >
                   <span>Facebook Officiel</span>
-                  <ExternalLink className="w-3 h-3 text-[#6B6177]" />
+                  <ExternalLink className="w-3 h-3 text-stone-500" />
                 </a>
               </li>
               <li>
@@ -134,11 +134,11 @@ export const Footer: React.FC = () => {
                   href={settings.googleMaps}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] flex items-center gap-1.5 hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+                  className="hover:text-white flex items-center gap-1.5 transition-colors py-1"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#5B2A86]" />
+                  <MapPin className="w-3.5 h-3.5 text-amber-300" />
                   <span>Localisation boutique (Google Maps)</span>
-                  <ExternalLink className="w-3 h-3 text-[#6B6177]" />
+                  <ExternalLink className="w-3 h-3 text-stone-500" />
                 </a>
               </li>
             </ul>
@@ -146,17 +146,17 @@ export const Footer: React.FC = () => {
 
           {/* Business & Payment Policy Reminder */}
           <div>
-            <h4 className="text-xs font-bold text-[#1F1630] uppercase tracking-wider mb-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
               Engagements de Vente
             </h4>
-            <div className="bg-white/80 p-4 rounded-[12px] border border-[#E6DDD0] text-xs space-y-2 text-[#1F1630] shadow-soft">
-              <p className="font-bold text-[#5B2A86]">
+            <div className="bg-violet-950/60 p-4 rounded-2xl border border-violet-900/60 text-xs space-y-2 text-stone-300">
+              <p className="font-bold text-amber-200">
                 Paiement Mobile Money / Moov Money exigé
               </p>
-              <p className="text-[11px] text-[#6B6177] leading-relaxed">
+              <p className="text-[11px] text-stone-400 leading-relaxed">
                 Pas de paiement à la livraison. Les commandes sont expédiées après réception du paiement. À la livraison, vous ne réglez que les frais de livraison.
               </p>
-              <p className="text-[11px] text-[#6B6177] font-medium">
+              <p className="text-[11px] text-stone-400">
                 Minimum gros : 3 pièces (6 pièces pour huiles mini-format).
               </p>
             </div>
@@ -164,20 +164,20 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className="pt-8 border-t border-[#E6DDD0] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#6B6177]">
+        <div className="pt-8 border-t border-violet-950/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-stone-500">
           <p>© {new Date().getFullYear()} {settings.businessName} — Tous droits réservés.</p>
           
           <div className="flex items-center gap-4">
             <button
               onClick={() => setCurrentView('conditions')}
-              className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+              className="hover:text-stone-300 transition-colors"
             >
               Conditions
             </button>
             <span>•</span>
             <button
               onClick={() => setCurrentView('contact')}
-              className="min-h-[44px] flex items-center hover:text-[#5B2A86] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+              className="hover:text-stone-300 transition-colors"
             >
               Contact
             </button>
@@ -185,7 +185,7 @@ export const Footer: React.FC = () => {
             {/* Owner portal access */}
             <button
               onClick={() => setCurrentView('admin')}
-              className="min-h-[44px] inline-flex items-center gap-1 hover:text-[#5B2A86] transition-colors text-[#6B6177] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B2A86] rounded-md"
+              className="inline-flex items-center gap-1 hover:text-amber-300 transition-colors text-stone-500 font-medium"
               title="Espace réservé à l'administration"
             >
               <Lock className="w-3 h-3" />

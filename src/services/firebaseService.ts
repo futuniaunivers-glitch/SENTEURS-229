@@ -131,6 +131,7 @@ export const FirebaseService = {
     try {
       await updateDoc(productRef, {
         stock: Math.max(0, newStock),
+        updatedAt: new Date().toISOString(),
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `products/${id}`);
